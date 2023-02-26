@@ -1,7 +1,10 @@
 import bs4, requests, re, os
 from datetime import date, datetime, timedelta
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-page = '' #The OLX address with the filters you want to look up
+page = '' #OLX page with filters
 
 #The headers help to avoid anti bot measures
 headers = {
@@ -15,6 +18,10 @@ soup = bs4.BeautifulSoup(res.text, 'html.parser')
 
 listings = []
 
+horas = #Max hours looking up
+
+max_price = #Max price (price + condominio)
+
 for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
     price = int(re.sub(r'\D', '', soup.find_all('span', {'class': 'main-price'})[i].text))
@@ -26,7 +33,7 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         
     total_price = price + condominio
     
-    if total_price > 0: #maximum total price you want to look up.
+    if total_price > max_price:
         continue
     
     date_published = soup.find_all('span', {'class': 'adDate'})[i*2+1].text
@@ -38,7 +45,7 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     else:
         continue    
     
-    if datetime.now() - datetime.strptime(date_listing, '%Y-%m-%d %H:%M:%S') > timedelta(hours = 1, minutes = 5):
+    if datetime.now() - datetime.strptime(date_listing, '%Y-%m-%d %H:%M:%S') > timedelta(hours = horas, minutes = 5):
         continue #If the listing is older than 1hour and 5minutes do not include
     
     rooms = soup.find_all('span', {'aria-label': re.compile('\d quarto')})[i].text
@@ -51,7 +58,18 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         neighbor = re.findall(r'Rio de Janeiro, (\w+( \w+)?)',soup.find_all('span', {'aria-label': re.compile('localiza')})[i].text)[0][0]
     except:
         neighbor = ''
-        
+    
+    res_listing = requests.get(link, headers = headers)
+    
+    soup_listing = bs4.BeautifulSoup(res_listing.text, 'html.parser')
+    
+    comments = soup_listing.find('span', {'class': 'ad__sc-1sj3nln-1 fMgwdS sc-ifAKCX cmFKIN'}).text
+    
+    diaria = re.findall(r'(?i)di[aá]ria', comments) #Look the comments for diarias
+    
+    if len(diaria) > 0: #Don't use the listing if is a diaria
+        continue
+    
     listing = {
         "Date": date_listing,
         "Price": price,
@@ -60,11 +78,48 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         "Size": size,
         "Rooms": rooms,
         "Neighbor": neighbor,
+        "Comments": comments,
         "Link": link
         }
     
     listings.append(listing)
+    
 
+
+
+if len(listings) != 0:  
+    message = ''
+    separator = ', '
+
+    keys = list(listings[0].keys())
+
+    for d in listings:
+      for key in keys:
+        message += key + ': ' + str(d[key]) + separator
+
+      message = message[:-len(separator)] + '\n\n\n'
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    smtp_server = smtplib.SMTP('smtp.gmail.com', 587)
+
+    smtp_server.starttls()
+    smtp_server.login('', '')
+                       #your email, your google application password
+    msg = MIMEMultipart()
+    msg['From'] = '' #your email
+    msg['To'] = '' #clients email
+    msg['Subject'] = 'Apartment Searcher ' + str(now) 
+    body = message
+    msg.attach(MIMEText(body, 'plain'))
+
+    smtp_server.sendmail('', '', msg.as_string())
+    #                     my email, recipient email
+    smtp_server.quit()
+
+
+#code next is for the testing enviroment
+'''
 now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 listings_file = open('listings_file_' + str(now) + '.txt', 'w')
@@ -74,3 +129,4 @@ for item in listings:
     listings_file.write("%s \n" % item)
         
 listings_file.close()
+'''
