@@ -52,7 +52,9 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
     size = soup.find_all('span', {'aria-label': re.compile('\d+ metros')})[i].text
     
-    link = soup.find_all('a', {'class': 'sc-eKZiaR YfujD'})[i].get('href')
+    price_x_mt2 = round(total_price / int(re.sub(r'\D', '', size)), 2)
+    
+    link = soup.find_all('a', {'data-ds-component' : 'DS-AdCardHorizontal'})[i].get('href')
     
     try:
         neighbor = re.findall(r'Rio de Janeiro, (\w+( \w+)?)',soup.find_all('span', {'aria-label': re.compile('localiza')})[i].text)[0][0]
@@ -63,8 +65,11 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
     soup_listing = bs4.BeautifulSoup(res_listing.text, 'html.parser')
     
-    comments = soup_listing.find('span', {'class': 'ad__sc-1sj3nln-1 fMgwdS sc-ifAKCX cmFKIN'}).text
-    
+    try:
+        comments = soup_listing.find('span', {'class': 'ad__sc-1sj3nln-1 fMgwdS sc-ifAKCX cmFKIN'}).text
+    except:
+        comments = ''
+        
     diaria = re.findall(r'(?i)di[aá]ria', comments) #Look the comments for diarias
     
     if len(diaria) > 0: #Don't use the listing if is a diaria
@@ -75,6 +80,7 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         "Price": price,
         "Condominio": condominio,
         "Total price": total_price,
+        "Price / mt2" : price_x_mt2,
         "Size": size,
         "Rooms": rooms,
         "Neighbor": neighbor,
@@ -82,22 +88,31 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         "Link": link
         }
     
-    listings.append(listing)
+    listing_formatted = f'''
+
+Price: {listing['Price']}
+Condominio: {listing['Condominio']}
+Total price: {listing['Total price']}
+Size: {listing['Size']}
+Price/mt2: {listing['Price / mt2']}
+Rooms: {listing['Rooms']}
+Neighbor: {listing['Neighbor']}
+
+Comments:
+{listing['Comments']}
+
+Link: {listing['Link']}
+Date: {listing['Date']}
+'''
+                
+    
+    listings.append(listing_formatted)
     
 
 
 
 if len(listings) != 0:  
-    message = ''
-    separator = ', '
-
-    keys = list(listings[0].keys())
-
-    for d in listings:
-      for key in keys:
-        message += key + ': ' + str(d[key]) + separator
-
-      message = message[:-len(separator)] + '\n\n\n'
+    message = '\n\n\n'.join(listings)
 
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -108,13 +123,13 @@ if len(listings) != 0:
                        #your email, your google application password
     msg = MIMEMultipart()
     msg['From'] = '' #your email
-    msg['To'] = '' #clients email
-    msg['Subject'] = 'Apartment Searcher ' + str(now) 
+    msg['To'] = '' #recipient email
+    msg['Subject'] = f'Encontrei {len(listings)} apartamentos para voce!'
     body = message
     msg.attach(MIMEText(body, 'plain'))
 
     smtp_server.sendmail('', '', msg.as_string())
-    #                     my email, recipient email
+    #                     your email, recipient email
     smtp_server.quit()
 
 
