@@ -1,10 +1,20 @@
-import bs4, requests, re, os
+#Libraries
+import bs4, requests, re
 from datetime import date, datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-page = '' #OLX page with filters
+#Variables
+page = '' #Page with filters
+frequency = 12 #In hours
+max_price = 3500 #Max price (price + condominio)
+server_email = ''
+server_password = ''
+client_email = ''
+
+
+### code ###
 
 #The headers help to avoid anti bot measures
 headers = {
@@ -17,10 +27,6 @@ res = requests.get(page, headers=headers)
 soup = bs4.BeautifulSoup(res.text, 'html.parser')
 
 listings = []
-
-horas = #Max hours looking up
-
-max_price = #Max price (price + condominio)
 
 for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
@@ -45,12 +51,12 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     else:
         continue    
     
-    if datetime.now() - datetime.strptime(date_listing, '%Y-%m-%d %H:%M:%S') > timedelta(hours = horas, minutes = 5):
+    if datetime.now() - datetime.strptime(date_listing, '%Y-%m-%d %H:%M:%S') > timedelta(hours = frequency, minutes = 10):
         continue #If the listing is older than 1hour and 5minutes do not include
     
-    rooms = soup.find_all('span', {'aria-label': re.compile('\d quarto')})[i].text
+    rooms = soup.find_all('span', {'aria-label': re.compile(r'\d quarto')})[i].text
     
-    size = soup.find_all('span', {'aria-label': re.compile('\d+ metros')})[i].text
+    size = soup.find_all('span', {'aria-label': re.compile(r'\d+ metros')})[i].text
     
     price_x_mt2 = round(total_price / int(re.sub(r'\D', '', size)), 2)
     
@@ -110,6 +116,8 @@ Date: {listing['Date']}
     
 
 
+#Production mode
+
 
 if len(listings) != 0:  
     message = '\n\n\n'.join(listings)
@@ -119,29 +127,33 @@ if len(listings) != 0:
     smtp_server = smtplib.SMTP('smtp.gmail.com', 587)
 
     smtp_server.starttls()
-    smtp_server.login('', '')
+    smtp_server.login(server_email, server_password)
                        #your email, your google application password
     msg = MIMEMultipart()
-    msg['From'] = '' #your email
-    msg['To'] = '' #recipient email
+    msg['From'] = server_email #your email
+    msg['To'] = client_email #clients email
     msg['Subject'] = f'Encontrei {len(listings)} apartamentos para voce!'
     body = message
     msg.attach(MIMEText(body, 'plain'))
 
-    smtp_server.sendmail('', '', msg.as_string())
+    smtp_server.sendmail(server_email, client_email, msg.as_string())
     #                     your email, recipient email
     smtp_server.quit()
 
 
-#code next is for the testing enviroment
+
+
+#Testing mode
+
 '''
 now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-listings_file = open('listings_file_' + str(now) + '.txt', 'w')
+listings_file = open('listings_test_file_' + str(now) + '.txt', 'w')
 
 for item in listings:
     
     listings_file.write("%s \n" % item)
         
 listings_file.close()
+
 '''
