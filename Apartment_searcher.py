@@ -12,9 +12,19 @@ max_price = 3500 #Max price (price + condominio)
 server_email = ''
 server_password = ''
 client_email = ''
-
+Market_analyser = False
 
 ### code ###
+
+if Market_analyser:
+    import pandas as pd
+
+    data = pd.read_csv('listings.txt')
+    data.columns = ['Codigo', 'Date', 'Price', 'Condominio', 'Total price', 'Size', 'Price / mt2', 'Neighbor']
+    market_mean = round(data['Price / mt2'].mean(), 2)
+    data_by_neighbor = data.groupby('Neighbor')
+    mean_by_neighbor = data_by_neighbor.mean()
+    mean_pricexmt2_by_neighbor = mean_by_neighbor['Price / mt2']
 
 #The headers help to avoid anti bot measures
 headers = {
@@ -81,12 +91,35 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     if len(diaria) > 0: #Don't use the listing if is a diaria
         continue
     
+    if Market_analyser and neighbor != '':
+        neighbor_mean = mean_pricexmt2_by_neighbor[neighbor:].iloc[0]
+        
+        if price_x_mt2 < market_mean:
+            market_mean_text = "Este apartamento esta " + str(round(market_mean - price_x_mt2, 2)) + " R$/mt2 mais BARATO do que a media na Zona Sul"
+        elif price_x_mt2 > market_mean:
+            market_mean_text = "Este apartamento esta " + str(round(price_x_mt2 - market_mean, 2)) + " R$/mt2 mais CARO do que a media na Zona Sul"    
+        else:
+            market_mean_text = "Este apartamento esta igual do que a media da Zona Sul"
+            
+        if price_x_mt2 < neighbor_mean:
+            neighbor_mean_text = "Este apartamento esta " + str(round(neighbor_mean - price_x_mt2, 2)) + " R$/mt2 mais BARATO do que a media em " +  neighbor
+        elif price_x_mt2 > neighbor_mean:
+            neighbor_mean_text = "Este apartamento esta " + str(round(price_x_mt2 - neighbor_mean, 2)) + " R$/mt2 mais CARO do que a media em " + neighbor    
+        else:
+            neighbor_mean_text = "Este apartamento esta igual do que a media em " + neighbor
+    else:
+        market_mean_text = ''
+        neighbor_mean_text = ''
+    
+    
     listing = {
         "Date": date_listing,
         "Price": price,
         "Condominio": condominio,
         "Total price": total_price,
         "Price / mt2" : price_x_mt2,
+        "Market mean": market_mean_text,
+        "Neighbor mean": neighbor_mean_text,
         "Size": size,
         "Rooms": rooms,
         "Neighbor": neighbor,
@@ -101,6 +134,8 @@ Condominio: {listing['Condominio']}
 Total price: {listing['Total price']}
 Size: {listing['Size']}
 Price/mt2: {listing['Price / mt2']}
+{listing['Market mean']}
+{listing['Neighbor mean']}
 Rooms: {listing['Rooms']}
 Neighbor: {listing['Neighbor']}
 
