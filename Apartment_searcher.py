@@ -106,16 +106,16 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         neighbor_mean = mean_pricexmt2_by_neighbor[neighbor:].iloc[0]
         
         if price_x_mt2 < market_mean:
-            market_mean_text = "Este apartamento esta " + str(round(market_mean - price_x_mt2, 2)) + " R$/mt2 mais BARATO do que a media na Zona Sul"
+            market_mean_text = str(round(market_mean - price_x_mt2, 2)) + " R$/mt2 mais BARATO do que a media na Zona Sul"
         elif price_x_mt2 > market_mean:
-            market_mean_text = "Este apartamento esta " + str(round(price_x_mt2 - market_mean, 2)) + " R$/mt2 mais CARO do que a media na Zona Sul"    
+            market_mean_text = str(round(price_x_mt2 - market_mean, 2)) + " R$/mt2 mais CARO do que a media na Zona Sul"    
         else:
             market_mean_text = "Este apartamento esta igual do que a media da Zona Sul"
             
         if price_x_mt2 < neighbor_mean:
-            neighbor_mean_text = "Este apartamento esta " + str(round(neighbor_mean - price_x_mt2, 2)) + " R$/mt2 mais BARATO do que a media em " +  neighbor
+            neighbor_mean_text = str(round(neighbor_mean - price_x_mt2, 2)) + " R$/mt2 mais BARATO do que a media em " +  neighbor
         elif price_x_mt2 > neighbor_mean:
-            neighbor_mean_text = "Este apartamento esta " + str(round(price_x_mt2 - neighbor_mean, 2)) + " R$/mt2 mais CARO do que a media em " + neighbor    
+            neighbor_mean_text = str(round(price_x_mt2 - neighbor_mean, 2)) + " R$/mt2 mais CARO do que a media em " + neighbor    
         else:
             neighbor_mean_text = "Este apartamento esta igual do que a media em " + neighbor
     else:
