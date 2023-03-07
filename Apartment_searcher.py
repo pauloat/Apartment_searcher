@@ -1,5 +1,5 @@
 #Libraries
-import bs4, requests, re
+import bs4, requests, re, logging
 from datetime import date, datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
@@ -8,11 +8,18 @@ from email.mime.multipart import MIMEMultipart
 #Variables
 page = '' #Page with filters
 frequency = 12 #In hours
-max_price = 3500 #Max price (price + condominio)
+max_price = 5000 #Max price (price + condominio)
 server_email = ''
 server_password = ''
 client_email = ''
 Market_analyser = False
+
+### logging ###
+
+logging.basicConfig(filename='Apartment_searcher_Main.log', level=logging.INFO)
+
+logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script starting')
+
 
 ### code ###
 
@@ -37,6 +44,9 @@ res = requests.get(page, headers=headers)
 soup = bs4.BeautifulSoup(res.text, 'html.parser')
 
 listings = []
+
+
+logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' BeatifulSoup found ' + str(len(soup.find_all('span', {'class': 'main-price'}))) + ' total listings')
 
 for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
@@ -87,8 +97,9 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
         comments = ''
         
     diaria = re.findall(r'(?i)di[aá]ria', comments) #Look the comments for diarias
+    temporada = re.findall(r'(?i)temporada', comments) 
     
-    if len(diaria) > 0: #Don't use the listing if is a diaria
+    if (len(diaria) + len(temporada)) > 0: #Don't use the listing if is a diaria
         continue
     
     if Market_analyser and neighbor != '':
@@ -144,11 +155,16 @@ Comments:
 
 Link: {listing['Link']}
 Date: {listing['Date']}
+
+---------------------------------------
 '''
                 
     
     listings.append(listing_formatted)
-    
+
+
+logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script found ' + str(len(listings)) + ' valid listings')
+
 
 
 #Production mode
@@ -179,8 +195,8 @@ if len(listings) != 0:
 
 
 #Testing mode
-
 '''
+
 now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 listings_file = open('listings_test_file_' + str(now) + '.txt', 'w')
@@ -190,5 +206,7 @@ for item in listings:
     listings_file.write("%s \n" % item)
         
 listings_file.close()
-
 '''
+
+logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script finished correctly')
+
