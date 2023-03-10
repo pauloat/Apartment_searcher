@@ -1,4 +1,4 @@
-#Libraries
+INFO:#Libraries
 import bs4, requests, re, logging
 from datetime import date, datetime, timedelta
 import smtplib
@@ -18,7 +18,7 @@ Market_analyser = False
 
 logging.basicConfig(filename='Apartment_searcher_Main.log', level=logging.INFO)
 
-logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script starting')
+logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script starting')
 
 
 ### code ###
@@ -46,7 +46,7 @@ soup = bs4.BeautifulSoup(res.text, 'html.parser')
 listings = []
 
 
-logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' BeatifulSoup found ' + str(len(soup.find_all('span', {'class': 'main-price'}))) + ' total listings')
+logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' BeatifulSoup found ' + str(len(soup.find_all('span', {'class': 'main-price'}))) + ' total listings')
 
 for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
@@ -163,7 +163,7 @@ Date: {listing['Date']}
     listings.append(listing_formatted)
 
 
-logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script found ' + str(len(listings)) + ' valid listings')
+logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script found ' + str(len(listings)) + ' valid listings')
 
 
 
@@ -172,8 +172,6 @@ logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Sc
 
 if len(listings) != 0:  
     message = '\n\n\n'.join(listings)
-
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     smtp_server = smtplib.SMTP('smtp.gmail.com', 587)
 
@@ -186,9 +184,15 @@ if len(listings) != 0:
     msg['Subject'] = f'Encontrei {len(listings)} apartamentos para voce!'
     body = message
     msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        smtp_server.sendmail(server_email, client_email, msg.as_string())
+        #                     your email, recipient email
+        logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Email send correctly')
+    except:
+        logging.error(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Error trying to send email')
 
-    smtp_server.sendmail(server_email, client_email, msg.as_string())
-    #                     your email, recipient email
+
     smtp_server.quit()
 
 
@@ -208,5 +212,5 @@ for item in listings:
 listings_file.close()
 '''
 
-logging.info('INFO: ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script finished correctly')
+logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script finished correctly')
 
