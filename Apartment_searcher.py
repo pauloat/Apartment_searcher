@@ -1,4 +1,4 @@
-INFO:#Libraries
+#Libraries
 import bs4, requests, re, logging
 from datetime import date, datetime, timedelta
 import smtplib
@@ -9,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 page = '' #Page with filters
 frequency = 12 #In hours
 max_price = 5000 #Max price (price + condominio)
+min_size = 0
 server_email = ''
 server_password = ''
 client_email = ''
@@ -78,7 +79,12 @@ for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
     size = soup.find_all('span', {'aria-label': re.compile(r'\d+ metros')})[i].text
     
-    price_x_mt2 = round(total_price / int(re.sub(r'\D', '', size)), 2)
+    size = int(re.sub(r'\D', '', size))
+    
+    if size < min_size:
+        continue
+    
+    price_x_mt2 = round(total_price / size)
     
     link = soup.find_all('a', {'data-ds-component' : 'DS-AdCardHorizontal'})[i].get('href')
     
@@ -168,7 +174,7 @@ logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script 
 
 
 #Production mode
-
+###
 
 if len(listings) != 0:  
     message = '\n\n\n'.join(listings)
@@ -196,10 +202,13 @@ if len(listings) != 0:
     smtp_server.quit()
 
 
-
+###
 
 #Testing mode
-'''
+
+
+'''###
+
 
 now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -210,7 +219,8 @@ for item in listings:
     listings_file.write("%s \n" % item)
         
 listings_file.close()
-'''
+
+'''###
 
 logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script finished correctly')
 
