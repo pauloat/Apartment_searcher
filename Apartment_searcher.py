@@ -1,9 +1,12 @@
 #Libraries
-import bs4, requests, re, logging
+import bs4, requests, re, logging, locale
 from datetime import date, datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+locale.setlocale(locale.LC_TIME, 'pt_BR.utf8')
+
 
 #Variables
 page = '' #Page with filters
@@ -51,60 +54,62 @@ logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Beatifu
 
 for i in range(len(soup.find_all('span', {'class': 'main-price'}))):
     
-    price = int(re.sub(r'\D', '', soup.find_all('span', {'class': 'main-price'})[i].text))
+    while True:
+        try:
+            link = soup.select(f'li.sc-1mburcf-1:nth-child({i+1}) > a:nth-child(1)')[0].get('href')
+            break
+        except:
+            i += 1
+            if i > 100:
+                break
+
+    res_listing = requests.get(link, headers = headers)
+    soup_listing = bs4.BeautifulSoup(res_listing.text, 'html.parser')
+    
+    codigo = soup_listing.select('.ad__sc-16iz3i7-0')[0].text
+    codigo = int(re.sub(r'\D', '', codigo))
+
+    price = soup_listing.select('h2.ad__sc-12l420o-1:nth-child(2)')[0].text
+    price = int(re.sub(r'\D', '', price))
     
     try:
-        condominio = int(re.sub(r'\D', '', soup.find_all('span', {'class': 'second-price-label'})[i].text))
+        condominio = soup_listing.select('div.gqoVfS:nth-child(1) > div:nth-child(3) > div:nth-child(3) > div:nth-child(1) > dd:nth-child(2)')[0].text
+        condominio = int(re.sub(r'\D', '', condominio))
     except:
         condominio = 0 #If there's no condominio it gave an error, now it just gave 0
         
     total_price = price + condominio
-    
     if total_price > max_price:
         continue
     
-    date_published = soup.find_all('span', {'class': 'adDate'})[i*2+1].text
-      
-    if date_published[:4] == 'Hoje':
-        date_listing = str(date.today()) + ' ' + date_published[6:12] + ':00' #transform the date in a standard format
-    elif date_published[:5] == 'Ontem':
-        date_listing = str(date.today() - timedelta(days=1)) + ' ' + date_published[7:13] + ':00'
-    else:
-        continue    
+    date_text = soup_listing.select('.fpFNoN > span:nth-child(1)')[0].text
+    date_numbers = re.sub(r'\D', '', date_text)
+    datetime_obj = datetime.strptime(date_numbers, '%d%m%H%M')
+    datetime_obj = datetime_obj.replace(year=date.today().year)
+    date_listing = datetime_obj.strftime("%A, %d de %B de %Y - %H:%M:%S")
+
+    if datetime.now() - datetime_obj > timedelta(hours = frequency, minutes = 10):
+        continue #If the listing is older than frequency and 10 minutes do not include
     
-    if datetime.now() - datetime.strptime(date_listing, '%Y-%m-%d %H:%M:%S') > timedelta(hours = frequency, minutes = 10):
-        continue #If the listing is older than 1hour and 5minutes do not include
-    
-    rooms = soup.find_all('span', {'aria-label': re.compile(r'\d quarto')})[i].text
-    
-    size = soup.find_all('span', {'aria-label': re.compile(r'\d+ metros')})[i].text
-    
+    rooms = soup_listing.select('div.ad__duvuxf-0:nth-child(6) > div:nth-child(1) > div:nth-child(2) > a:nth-child(1)')[0].text
+     
+    size = soup_listing.select('div.ad__duvuxf-0:nth-child(5) > div:nth-child(1) > dd:nth-child(2)')[0].text
     size = int(re.sub(r'\D', '', size))
-    
     if size < min_size:
         continue
     
     price_x_mt2 = round(total_price / size)
     
-    link = soup.find_all('a', {'data-ds-component' : 'DS-AdCardHorizontal'})[i].get('href')
+    neighbor = soup_listing.select('div.ad__sc-1aze3je-1:nth-child(9) > a:nth-child(1)')[0].text
+    neighbor = neighbor.strip() 
     
     try:
-        neighbor = re.findall(r'Rio de Janeiro, (\w+( \w+)?)',soup.find_all('span', {'aria-label': re.compile('localiza')})[i].text)[0][0]
-    except:
-        neighbor = ''
-    
-    res_listing = requests.get(link, headers = headers)
-    
-    soup_listing = bs4.BeautifulSoup(res_listing.text, 'html.parser')
-    
-    try:
-        comments = soup_listing.find('span', {'class': 'ad__sc-1sj3nln-1 fMgwdS sc-ifAKCX cmFKIN'}).text
+        comments = soup_listing.select('.ad__sc-1sj3nln-1')[0].text
     except:
         comments = ''
         
     diaria = re.findall(r'(?i)di[aá]ria', comments) #Look the comments for diarias
     temporada = re.findall(r'(?i)temporada', comments) 
-    
     if (len(diaria) + len(temporada)) > 0: #Don't use the listing if is a diaria
         continue
     
@@ -174,7 +179,7 @@ logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script 
 
 
 #Production mode
-###
+"""###
 
 if len(listings) != 0:  
     message = '\n\n\n'.join(listings)
@@ -202,12 +207,12 @@ if len(listings) != 0:
     smtp_server.quit()
 
 
-###
+"""###
 
 #Testing mode
 
 
-'''###
+###
 
 
 now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -220,7 +225,6 @@ for item in listings:
         
 listings_file.close()
 
-'''###
+###
 
 logging.info(' ' + str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + ' Script finished correctly')
-
